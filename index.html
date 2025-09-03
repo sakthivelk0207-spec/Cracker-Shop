@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Cracker Shop</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .header,
+    .item {
+      display: grid;
+      grid-template-columns: 50px 1fr 120px 100px 100px 100px 120px;
+      align-items: center;
+      padding: 8px;
+    }
+
+    .header {
+      font-weight: bold;
+      background: #ddd;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .item {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #f9f9f9;
+      margin: 6px 0;
+    }
+
+    .buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .buttons button {
+      padding: 4px 10px;
+      border: 1px solid #888;
+      background: #eee;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+
+    .crossed-out {
+      text-decoration: line-through;
+      color: #555454;
+      /* optional: greyed out */
+    }
+
+    .bold {
+      font-weight: bold;
+      color: #000;
+      /* optional: ensure it's darker */
+    }
+
+
+    .buttons button:hover {
+      background: #ddd;
+    }
+
+    .count {
+      min-width: 24px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .preview {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .bill-header,
+    .bill-row {
+      display: grid;
+      grid-template-columns: 50px 1fr 120px 100px 100px 100px 120px;
+      padding: 6px;
+      align-items: center;
+    }
+
+    .bill-header {
+      font-weight: bold;
+      background: #ddd;
+      border-radius: 6px;
+    }
+
+    .bill-row {
+      border-bottom: 1px solid #ccc;
+    }
+
+    .total {
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 10px;
+      text-align: right;
+    }
+
+    .highlight-added {
+      background-color: #0bde3c !important;
+      /* light green */
+      transition: background-color 0.5s ease;
+    }
+
+    .highlight-removed {
+      background-color: #f43737 !important;
+      /* light green */
+      transition: background-color 0.5s ease;
+    }
+
+    #discount-info {
+      text-align: center;
+      font-weight: bold;
+      margin: 15px 0;
+      color: #d9534f;
+      font-size: 30px;
+      /* bigger font */
+    }
+
+    .floating-discount {
+      position: absolute;
+      background: #000;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .btn {
+      font-size: 18px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 0 10px;
+      font-weight: bold;
+    }
+
+    .preview-btn {
+      background-color: #28a745;
+      /* green */
+      color: white;
+    }
+
+    .preview-btn:hover {
+      background-color: #218838;
+    }
+
+    .clear-btn {
+      background-color: #dc3545;
+      /* red */
+      color: white;
+    }
+
+    .clear-btn:hover {
+      background-color: #c82333;
+    }
+
+    .back-btn {
+      background-color: #007bff;
+      /* blue */
+      color: white;
+    }
+
+    .back-btn:hover {
+      background-color: #0069d9;
+    }
+
+    .download-btn {
+      background-color: #28a745;
+      /* green */
+      color: white;
+    }
+
+    .download-btn:hover {
+      background-color: #218838;
+    }
+
+    /* Make grid responsive */
+    @media (max-width: 768px) {
+
+      .header,
+      .item,
+      .bill-header,
+      .bill-row {
+        grid-template-columns: 40px 1fr 70px 80px 80px 80px;
+        font-size: 12px;
+      }
+    }
+
+    /* On very small screens, allow horizontal scroll */
+    @media (max-width: 480px) {
+
+      .header,
+      .item,
+      .bill-header,
+      .bill-row {
+        display: grid;
+        grid-template-columns: 50px 150px 80px 80px 80px 80px 100px;
+        overflow-x: auto;
+        font-size: 11px;
+      }
+
+      .item,
+      .bill-row {
+        padding: 4px;
+      }
+
+      .buttons button {
+        padding: 6px 12px;
+        /* bigger for thumbs */
+        font-size: 14px;
+      }
+
+      .count {
+        font-size: 14px;
+      }
+    }
+
+    .selected {
+      background-color: #d9f2ff !important;
+      /* light blue */
+      border-color: #3399ff;
+    }
+  </style>
+</head>
+
+<div style="text-align:center;  margin-bottom:20px;">
+  <img src="Cracker_shop_logo.png" alt="Shop Logo" style="width:85%; height:85%;">
+</div>
+
+<div id="discount-info">
+  40% Discount from MRP for each and every item. <br>
+  Get upto 45% discount by purchasing more than Rs.5000 of MRP.
+</div>
+
+<!-- Item List -->
+<div class="header">
+  <span>S.No</span>
+  <span>Item</span>
+  <span>Type</span>
+  <span>MRP</span>
+  <span>Our Price</span>
+  <span>Qty</span>
+  <span>Amount</span>
+</div>
+<div id="items-container"></div>
+
+<div style="text-align:center; margin-top:20px; display:flex; justify-content:space-between;">
+  <button class="btn clear-btn" onclick="clearAll()">Clear All</button>
+  <button class="btn preview-btn" onclick="showPreview()">Preview</button>
+</div>
+
+<!-- Bill Preview -->
+<div class="preview" id="preview">
+  <h2>Bill Preview</h2>
+  <div class="bill-header">
+    <span>S.No</span>
+    <span>Item</span>
+    <span>Type</span>
+    <span>MRP</span>
+    <span>Our Price</span>
+    <span>Qty</span>
+    <span>Amount</span>
+  </div>
+  <div id="bill-items"></div>
+  <div class="total" id="total"></div>
+  <div id="customer-details" style="margin-top:20px;">
+    <h3>Customer Details</h3>
+    <h3>
+      Name: <input type="text" id="cust-name" required>
+    </h3><br><br>
+    <h3>
+      Phone: <input type="text" id="cust-phone" maxlength="10" required>
+    </h3><br><br>
+    <h3>
+      Address:<br>
+      <textarea id="cust-address" rows="3" cols="40" required></textarea>
+    </h3>
+  </div>
+  <div style="text-align:center; margin-top:15px;">
+    <button class="btn back-btn" onclick="hidePreview()">Back</button>
+    <button class="btn download-btn" onclick="downloadPDF()">Download Bill as PDF</button>
+  </div>
+
+</div>
+
+<script>
+
+
+  // Always scroll to top on page load/refresh
+  window.onbeforeunload = function () {
+    window.scrollTo(0, 0);
+  };
+
+  const items = [
+    { id: 1, name: '4" GOLD LAKSHMI (5 PCS)', type: '1 PKT', mrp: 100, count: 0 },
+    { id: 2, name: '2 ¾" KURUVI ( 5PCS)', type: '1 PKT', mrp: 24, count: 0 },
+    { id: 3, name: '2 ¾" KURUVI SPECIAL ( 5 PCS)', type: '1 PKT', mrp: 40, count: 0 },
+    { id: 4, name: '3 ½" LAKSHMI ( 5 PCS )', type: '1 PKT', mrp: 50, count: 0 },
+    { id: 5, name: '4" LAKSHMI ( 5 PCS)', type: '1 PKT', mrp: 67, count: 0 },
+    { id: 6, name: '4" DLX LAKSHMI ( 5 PCS )', type: '1 PKT', mrp: 100, count: 0 },
+    { id: 7, name: '4" MORI DLX ( 16 PLY) (5 PCS)', type: '1 PKT', mrp: 166, count: 0 },
+    { id: 8, name: '5" JALLI KATTU ( 20 PLY) ( 5 PCS)', type: '1 PKT', mrp: 200, count: 0 },
+    { id: 9, name: '2 SOUND CRACKERS ( 5 PCS)', type: '1 PKT', mrp: 134, count: 0 },
+    { id: 10, name: 'G. CHAKKERS BIG 10 Pcs', type: '1 BOX', mrp: 140, count: 0 },
+    { id: 11, name: 'G. CHAKKERS BIG 25 Pcs', type: '1 BOX', mrp: 336, count: 0 },
+    { id: 12, name: 'G. CHAKKERS SPECIAL ( 10 PCS)', type: '1 BOX', mrp: 250, count: 0 },
+    { id: 13, name: 'G. CHAKKERS DELUXE ( 10 PCS)', type: '1 BOX', mrp: 450, count: 0 },
+    { id: 14, name: 'FLOWER POTS BIG (10 PCS)', type: '1 BOX', mrp: 250, count: 0 },
+    { id: 15, name: 'FLOWER POTS SPECIAL ( 10 PCS)', type: '1 BOX', mrp: 300, count: 0 },
+    { id: 16, name: 'FLOWER POTS ASOKA ( 10 PCS)', type: '1 BOX', mrp: 400, count: 0 },
+    { id: 17, name: 'FLOWER POTS COLOUR KOTTI ( 10 PCS )', type: '1 BOX', mrp: 600, count: 0 },
+    { id: 18, name: 'COLOUR KOTTI (MORI) (10 PCS )', type: '1 BOX', mrp: 850, count: 0 },
+    { id: 19, name: 'FLOWER POTS DELUXE 5 Pc', type: '1 BOX', mrp: 500, count: 0 },
+    { id: 20, name: 'BARATH KOTI 2 Pc (MORI)', type: '1 BOX', mrp: 600, count: 0 },
+    { id: 21, name: 'BULLET BOMB ( 10 PCS )', type: '1 BOX', mrp: 70, count: 0 },
+    { id: 22, name: 'HYDRO BOMB ( 10 PCS )', type: '1 BOX', mrp: 180, count: 0 },
+    { id: 23, name: 'KING OF KING BOMB (10 PCS)', type: '1 BOX', mrp: 280, count: 0 },
+    { id: 24, name: 'CLASSIC BOMB / COMMANDER BOMB (10 PCS) ', type: '1 BOX', mrp: 336, count: 0 },
+    { id: 25, name: 'GODZILLA BOMB ( 10 PCS)', type: '1 BOX', mrp: 550, count: 0 },
+    { id: 26, name: 'AGNI BOMB / ANIMAL BOMB (10 PCS )', type: '1 BOX', mrp: 600, count: 0 },
+    { id: 27, name: '50 RED CHILLIS', type: '1 PKT', mrp: 66, count: 0 },
+    { id: 28, name: '100 RED CHILLIS', type: '1 PKT', mrp: 120, count: 0 },
+    { id: 29, name: '50 STRIPPED BIJILI', type: '1 PKT', mrp: 80, count: 0 },
+    { id: 30, name: ' 1 ½ TWINKLING STAR / JIL JIL (10 PCS)', type: '1 BOX', mrp: 83, count: 0 },
+    { id: 31, name: '4\'TWINKLING STAR (10 PCS)', type: '1 BOX', mrp: 235, count: 0 },
+    { id: 32, name: 'KIT KAT / MIRCHI KRICHI (10 PCS)', type: '1 BOX', mrp: 100, count: 0 },
+    { id: 33, name: 'NAUGHIYBOYCIUPCS', type: '1 BOX', mrp: 176, count: 0 },
+    { id: 34, name: 'STONE ( 10 PCS)', type: '1 BOX', mrp: 38, count: 0 },
+    { id: 35, name: 'ZEE BBOM BAA / MAGIC POPS (10 PCS )', type: '1 BOX', mrp: 34, count: 0 },
+    { id: 36, name: 'SERPENT EGG BIG (5 PCS)', type: '1 UNIT', mrp: 100, count: 0 },
+    { id: 37, name: ' ANACONDA (10 PCS)', type: '1 BOX', mrp: 300, count: 0 },
+    { id: 38, name: 'ROLL CAPS (10 PCS)', type: '1 BOX', mrp: 280, count: 0 },
+    { id: 39, name: 'ASSORTED CARTOON (5 PCS)', type: '1 BOX', mrp: 70, count: 0 },
+    { id: 40, name: 'PILI CRACKERS (25 PC)', type: '1 BOX', mrp: 468, count: 0 },
+    { id: 41, name: 'WONDER THROW  (10 BOXES)', type: '1 BOX', mrp: 500, count: 0 },
+    { id: 42, name: 'RACING CAR (2 PC)', type: '1 BOX', mrp: 670, count: 0 },
+    { id: 43, name: 'WANTED GUN (5 PC)', type: '1 BOX', mrp: 400, count: 0 },
+    { id: 44, name: 'SMOKY STICK (YELLOW & BLUE) (2PCS)', type: '1 BOX', mrp: 50, count: 0 },
+
+
+    { id: 45, name: 'ROCKET BOMB (10 PCS )', type: '1 BOX', mrp: 230, count: 0 },
+    { id: 46, name: '2 SOUND ROCKET ( 10 PCS)', type: '1 BOX', mrp: 384, count: 0 },
+    { id: 47, name: 'WHISTLING ROCKET (10 PCS)', type: '1 BOX', mrp: 550, count: 0 },
+    { id: 48, name: 'SINGING DOLL / WHISTLING SHOT(1 PC)', type: '1 BOX', mrp: 670, count: 0 },
+    { id: 49, name: 'SKY LANTERN / PARACHUTE (1 PC)', type: '1 PCS', mrp: 170, count: 0 },
+
+    { id: 50, name: 'FEARTHER (5 PCS)', type: '1 BOX', mrp: 280, count: 0 },
+    { id: 51, name: 'DISCO SHOWER (5 PCS)', type: '1 BOX', mrp: 300, count: 0 },
+    { id: 52, name: 'KJ POT / COLOUR WAR MIXING (5 PCS)', type: '1 BOX', mrp: 560, count: 0 },
+    { id: 53, name: 'TRI COLOUR (5 COLOURS WITH CRACKLING (5 PCS)', type: '1 BOX', mrp: 800, count: 0 },
+    { id: 54, name: 'COLOUR RAIN / GOLDEN GLOBE ( 5 PCS)', type: '1 BOX', mrp: 260, count: 0 },
+    { id: 55, name: 'POLO/ TING TONG (1 PC)', type: '1 BOX', mrp: 110, count: 0 },
+    { id: 56, name: 'TEDDY / 5 GRILS ( 1 PC)', type: '1 BOX', mrp: 170, count: 0 },
+    { id: 57, name: 'APPLE / ORANGE (6PC)', type: '1 BOX', mrp: 550, count: 0 },
+    { id: 58, name: 'FLY MAGIC / TEEN TITANS ( 6 PCS)', type: '1 BOX', mrp: 560, count: 0 },
+    { id: 59, name: 'ICE CREAM CART (5 PCS)', type: '1 BOX', mrp: 370, count: 0 },
+    { id: 60, name: 'KNOCK OUT (2PCS)', type: '1 BOX', mrp: 500, count: 0 },
+    { id: 61, name: 'WIRE CHAKKAR ( 10 PCS )', type: '1 BOX', mrp: 500, count: 0 },
+    { id: 62, name: 'ULTRA PENCIL (3 PCS)', type: '1 BOX', mrp: 200, count: 0 },
+    { id: 63, name: 'POP CORN / WATER FALL (5 PCS)', type: '1 BOX', mrp: 600, count: 0 },
+    { id: 64, name: 'SIVAKASI SPECIAL / POWER RAIN (2 PCS)', type: '1 BOX', mrp: 550, count: 0 },
+    { id: 65, name: 'SMOKE ( 3 PCS)', type: '1 BOX', mrp: 500, count: 0 },
+    { id: 66, name: 'SMILE PLEASE (10 PC)', type: '1 BOX', mrp: 500, count: 0 },
+    { id: 67, name: 'FUJI CAANDLE (5 PCS)', type: '1 BOX', mrp: 800, count: 0 },
+    { id: 68, name: 'ROTATING SPARKLERS (1 PC)', type: '1 BOX', mrp: 600, count: 0 },
+    { id: 69, name: 'RAINBOW COLOUR ( 3 COLOURS IN 1) (3 PCS)', type: '1 BOX', mrp: 830, count: 0 },
+    { id: 70, name: 'LOLLI POP (5 PCS )', type: '1 BOX', mrp: 600, count: 0 },
+    { id: 71, name: 'MONEY MONEY / ROSE PETAL (2 PCS)', type: '1 BOX', mrp: 1170, count: 0 },
+    { id: 72, name: 'TOLD IS GOLD (25 PCS)', type: '1 BOX', mrp: 608, count: 0 },
+    { id: 73, name: '1" AERIAL OUT ( 1 PC)', type: '1 BOX', mrp: 100, count: 0 },
+    { id: 74, name: 'PENTA 5 IN 1 / COLOR COLLECTION (5PCS)', type: '1 BOX ', mrp: 500, count: 0 },
+    { id: 75, name: 'WAR (3 PC)', type: '1 BOX', mrp: 667, count: 0 },
+    { id: 76, name: '2" AERIAL OUT (3 PCS)', type: '1 BOX', mrp: 700, count: 0 },
+    { id: 77, name: '2" AERIAL OUT (1 PCS)', type: '1 BOX', mrp: 384, count: 0 },
+    { id: 78, name: '3½ AERIAL OUT (1 PCS )', type: '1 BOX', mrp: 750, count: 0 },
+    { id: 79, name: '4" AERIAL OUT ( GOLDEN EYE / NAYAGARA) (1 PC)', type: '1 BOX', mrp: 1170, count: 0 },
+    { id: 80, name: '4" AERIAL OUT (2 PCS)', type: '1 BOX', mrp: 2000, count: 0 },
+    { id: 81, name: '5" AERIAL OUT (1 PCS)', type: '1 BOX', mrp: 1800, count: 0 },
+    { id: 82, name: 'TEXAS DELIGHT / CRACKLING (1 PC)', type: '1 BOX', mrp: 1335, count: 0 },
+    { id: 83, name: '4" AERIAL OUT (1 PC)', type: '1 BOX', mrp: 1250, count: 0 },
+    { id: 84, name: '4" AERIAL OUT (2 PCS)', type: '1 BOX', mrp: 2500, count: 0 },
+    { id: 85, name: '4" DOUBLE BALL (1 PC)', type: '1 BOX', mrp: 1335, count: 0 },
+    { id: 86, name: '4 ½" AERIAL OUT (2 PCS)', type: '1 BOX', mrp: 3000, count: 0 },
+    { id: 87, name: 'CANDY CRUSH / PINTO (9 MEGA DISPLAY)', type: '1 BOX', mrp: 1500, count: 0 },
+    { id: 88, name: '12 SHOT RIDER (R & G)', type: '1 BOX', mrp: 520, count: 0 },
+    { id: 89, name: 'LOVE DOSE (6 MULTICOLOURS SHOT)', type: '1 BOX', mrp: 300, count: 0 },
+    { id: 90, name: 'HONEY MOON (12 SHOTS)', type: '1 BOX', mrp: 928, count: 0 },
+    { id: 91, name: '10 SHOT (MULTI COLOURS)', type: '1 BOX', mrp: 600, count: 0 },
+    { id: 92, name: '15 SHOT (MULTI COLOURS)', type: '1 BOX', mrp: 900, count: 0 },
+    { id: 93, name: '30 SHOT (MULTI COLOURS)', type: '1 BOX', mrp: 1280, count: 0 },
+    { id: 94, name: '60 SHOT (MULTI COLOURS)', type: '1 BOX', mrp: 2560, count: 0 },
+    { id: 95, name: '120 SHOT (MULTI COLOURS)', type: '1 BOX', mrp: 5120, count: 0 },
+    { id: 96, name: 'HALDI 120 SHOT MORI', type: '1 BOX', mrp: 6000, count: 0 },
+    { id: 97, name: '240 SHOT (MULTI COLOURS)', type: '1 BOX', mrp: 9500, count: 0 },
+    { id: 98, name: 'PUBG 20 SHOTS (5 X 4)', type: '1 BOX', mrp: 2000, count: 0 },
+    { id: 99, name: '10 X 10 MEGA DISPLAY', type: '1 BOX', mrp: 11150, count: 0 },
+    { id: 100, name: 'PEACOCK (3 WAY)', type: '1 BOX', mrp: 480, count: 0 },
+    { id: 101, name: 'MAGICAL PEACOCK (5 WAY)', type: '1 BOX', mrp: 540, count: 0 },
+    { id: 102, name: 'BAADA PEACOCK', type: '1 BOX', mrp: 1160, count: 0 },
+    { id: 103, name: '5 IN 1', type: '1 BOX', mrp: 1000, count: 0 },
+    { id: 104, name: 'SUNFLOWER POPS MORI (5 PCS)', type: '1 BOX', mrp: 900, count: 0 },
+    { id: 105, name: 'MOJITO / TROPICAL (3 PCS)', type: '1 BOX', mrp: 1200, count: 0 },
+    { id: 106, name: 'JUNGLE BABBLERS / CIRCUS (5PCS)', type: '1 BOX', mrp: 700, count: 0 },
+    { id: 107, name: 'TOY FOUNTAIN (2 PC)', type: '1 BOX', mrp: 675, count: 0 },
+    { id: 108, name: 'ROYALE (1 PC)', type: '1 BOX', mrp: 400, count: 0 },
+    { id: 109, name: '7 SHOTS (5 PCS)', type: '1 BOX', mrp: 300, count: 0 },
+    { id: 110, name: 'MINI SIRAN', type: '1 BOX', mrp: 450, count: 0 },
+    { id: 111, name: 'TIN SHOWER (1 PC)', type: '1 BOX', mrp: 250, count: 0 },
+    { id: 112, name: 'BUTTERFLY (RED & GREEN) (10 PCS)', type: '1 BOX', mrp: 260, count: 0 },
+    { id: 113, name: 'BAMBARA (RED & GREEN) (10 PCS)', type: '1 BOX', mrp: 350, count: 0 },
+    { id: 114, name: 'WHISTLING DIXIE (5 PCS)', type: '1 BOX', mrp: 350, count: 0 },
+    { id: 115, name: 'COCKTAIL (3 PC)', type: '1 BOX', mrp: 700, count: 0 },
+    { id: 116, name: 'SIREN (3 PCS)', type: '1 BOX', mrp: 565, count: 0 },
+    { id: 117, name: '4X4 WHEEL (5 PCS)', type: '1 BOX', mrp: 536, count: 0 },
+    { id: 118, name: 'BLACK MONEY / MONEY BLAST (5 PCS)', type: '1 BOX', mrp: 770, count: 0 },
+    { id: 119, name: '5 STAR (STEP BY STEP 5 COLOURS) (1 PC)', type: '1 BOX', mrp: 960, count: 0 },
+    { id: 120, name: 'CRACKLING FOUNTAIN (3 PCS)', type: '1 BOX', mrp: 900, count: 0 },
+    { id: 121, name: 'FROZEN / RANG LAVA (1 PC)', type: '1 BOX', mrp: 380, count: 0 },
+    { id: 122, name: 'BEES / GILT / SOFTY', type: '1 BOX', mrp: 260, count: 0 },
+    { id: 123, name: 'GILITERING POPS', type: '1 BOX', mrp: 336, count: 0 },
+    { id: 124, name: '7 CM ELECTRIC SPARKLERS (10 PCS)', type: '1 BOX', mrp: 30, count: 0 },
+    { id: 125, name: '7 CM COLOUR SPARKLERS (10 PCS)', type: '1 BOX', mrp: 36, count: 0 },
+    { id: 126, name: '7 CM GREEN SPARKLERS (10 PCS)', type: '1 BOX', mrp: 45, count: 0 },
+    { id: 127, name: '7 CM RED SPARKLERS (10 PCS)', type: '1 BOX', mrp: 50, count: 0 },
+    { id: 128, name: '10 CM ELECTRIC SPARKLERS (10 PCS)', type: '1 BOX', mrp: 56, count: 0 },
+    { id: 129, name: '10 CM COLOUR SPARKLERS (10 PCS)', type: '1 BOX', mrp: 62, count: 0 },
+    { id: 130, name: '10 CM GREEN SPARKLERS (10 PCS)', type: '1 BOX', mrp: 64, count: 0 },
+    { id: 131, name: '10 CM RED SPARKLERS (10 PCS)', type: '1 BOX', mrp: 70, count: 0 },
+    { id: 132, name: '12 CM ELECTRIC SPARKLERS (10 PCS)', type: '1 BOX', mrp: 70, count: 0 },
+    { id: 133, name: '12 CM COLOUR SPARKLERS (10 PCS)', type: '1 BOX', mrp: 76, count: 0 },
+    { id: 134, name: '12 CM GREEN SPARKLERS (10 PCS)', type: '1 BOX', mrp: 84, count: 0 },
+    { id: 135, name: '12 CM RED SPARKLERS (10 PCS)', type: '1 BOX', mrp: 92, count: 0 },
+    { id: 136, name: '15 CM ELECTRIC SPARKLERS (10 PCS)', type: '1 BOX', mrp: 130, count: 0 },
+    { id: 137, name: '15 CM COLOUR SPARKLERS (10 PCS)', type: '1 BOX', mrp: 145, count: 0 },
+    { id: 138, name: '15 CM GREEN SPARKLERS (10 PCS)', type: '1 BOX', mrp: 158, count: 0 },
+    { id: 139, name: '15 CM RED SPARKLERS (10 PCS)', type: '1 BOX', mrp: 170, count: 0 },
+    { id: 140, name: '15 CM SILVER DROPS (10 PCS)', type: '1 BOX', mrp: 175, count: 0 },
+    { id: 141, name: '15 CM PINK (10 PCS)', type: '1 BOX', mrp: 180, count: 0 },
+    { id: 142, name: '30 CM ELECTRIC SPARKLERS (5 PCS)', type: '1 BOX', mrp: 130, count: 0 },
+    { id: 143, name: '30 CM COLOUR SPARKLERS (5 PCS)', type: '1 BOX', mrp: 145, count: 0 },
+    { id: 144, name: '30 CM GREEN SPARKLERS (5 PCS)', type: '1 BOX', mrp: 158, count: 0 },
+    { id: 145, name: '30 CM RED SPARKLERS (5 PCS)', type: '1 BOX', mrp: 170, count: 0 },
+    { id: 146, name: '50 CM ELECTRIC SPARKLERS (5 PCS)', type: '1 BOX', mrp: 550, count: 0 },
+    { id: 147, name: '50 CM COLOUR SPARKLERS (5 PCS)', type: '1 BOX', mrp: 580, count: 0 },
+    { id: 148, name: 'GLAMOUR 3 IN 1', type: '1 PKT', mrp: 80, count: 0 },
+    { id: 149, name: 'GALAXY 5 IN 1', type: '1 BOX', mrp: 100, count: 0 },
+    { id: 150, name: '5 MEN ARMY (5 IN 1)', type: '1 BOX', mrp: 170, count: 0 },
+    { id: 151, name: 'DHASARA SUPER FINE (10 IN 1)', type: '1 BOX', mrp: 550, count: 0 },
+    { id: 152, name: '21 ITEM GIFT BOX', type: '1 BOX', mrp: 350, count: 0 },
+    { id: 153, name: '31 ITEM GIFT BOX', type: '1 BOX', mrp: 400, count: 0 },
+    { id: 154, name: '35 ITEM GIFT BOX', type: '1 BOX', mrp: 500, count: 0 },
+    { id: 155, name: '41 ITEM GIFT BOX', type: '1 BOX', mrp: 650, count: 0 },
+    { id: 156, name: '51 ITEM GIFT BOX', type: '1 BOX', mrp: 900, count: 0 },
+    { id: 157, name: '1000 WALA (S)', type: '1 BOX', mrp: 500, count: 0 },
+    { id: 158, name: '1000 WALA (L)', type: '1 BOX', mrp: 1000, count: 0 },
+    { id: 159, name: '2000 WALA (S)', type: '1 BOX', mrp: 1000, count: 0 },
+    { id: 160, name: '2000 WALA SPL (L)', type: '1 BOX', mrp: 2000, count: 0 },
+    { id: 161, name: '5000 WALA (S)', type: '1 BOX', mrp: 2500, count: 0 },
+    { id: 162, name: '5000 WALA SPL (L)', type: '1 BOX', mrp: 5000, count: 0 },
+    { id: 163, name: '1/4 PAPER BOMB', type: '1 BOX', mrp: 150, count: 0 },
+    { id: 164, name: '1/2 PAPER BOMB', type: '1 BOX', mrp: 300, count: 0 },
+    // Add hundreds more...
+  ];
+
+
+
+  const container = document.getElementById("items-container");
+
+  items.forEach((item, index) => {
+    item.serial = index + 1;
+    item.ourPrice = (item.mrp * 0.6).toFixed(2); // 40% discount
+    const div = document.createElement("div");
+    div.className = "item";
+    div.setAttribute("data-id", item.id);
+    div.innerHTML = `
+        <span>${item.serial}</span>
+        <span>${item.name}</span>
+        <span>${item.type ? item.type : ""}</span>
+        <span class="crossed-out">Rs.${item.mrp}</span>
+        <span class="bold">Rs.${item.ourPrice}</span>
+        <div class="buttons">
+          <button onclick="decrease(${item.id})">-</button>
+          <span id="count-${item.id}" class="count">0</span>
+          <button onclick="increase(${item.id})">+</button>
+        </div>
+        <span  class="bold" id="amount-${item.id}">Rs.0</span>
+      `;
+    container.appendChild(div);
+  });
+
+  function showFloatingDiscount(id, discountRate, totalMRP) {
+    const itemDiv = document.querySelector(`.item[data-id="${id}"]`);
+    if (!itemDiv) return;
+
+    // Create floating element
+    const float = document.createElement("div");
+    float.className = "floating-discount";
+    float.innerHTML = `Discount: ${discountRate * 100}% <br> MRP: Rs.${totalMRP.toFixed(2)}`;
+
+    // Position it above the item
+    const rect = itemDiv.getBoundingClientRect();
+    float.style.left = rect.left + window.scrollX + 50 + "px";
+    float.style.top = rect.top + window.scrollY - 30 + "px";
+
+    document.body.appendChild(float);
+
+    // Animate in
+    setTimeout(() => {
+      float.style.opacity = 1;
+      float.style.transform = "translateY(-10px)";
+    }, 10);
+
+    // Remove after 2 seconds
+    setTimeout(() => {
+      float.style.opacity = 0;
+      float.style.transform = "translateY(-20px)";
+      setTimeout(() => float.remove(), 300);
+    }, 2000);
+  }
+  function clearAll() {
+    // Reset all items
+    items.forEach(item => {
+      item.count = 0;
+      document.getElementById(`count-${item.id}`).innerText = "0";
+      document.getElementById(`amount-${item.id}`).innerText = "Rs.0";
+    });
+
+    // Hide preview if open
+    document.getElementById("preview").style.display = "none";
+
+    // Scroll to top after clearing
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function hidePreview() {
+    document.getElementById("preview").style.display = "none";
+  }
+
+  function updateAmount(id) {
+    const item = items.find(i => i.id === id);
+
+    // Recalculate total MRP of all items
+    let totalMRP = 0;
+    items.forEach(it => { totalMRP += it.count * it.mrp; });
+
+    // Decide discount percentage
+    let discountRate = totalMRP >= 5000 ? 0.45 : 0.40;
+
+    // Update all Our Prices dynamically
+    items.forEach(it => {
+      it.ourPrice = (it.mrp * (1 - discountRate)).toFixed(2);
+      // update UI price for this item if visible
+      const row = document.querySelector(`.item[data-id="${it.id}"]`);
+      if (row) {
+        row.querySelector(".bold").innerText = "Rs." + it.ourPrice;
+        const amountSpan = document.getElementById(`amount-${it.id}`);
+        if (amountSpan) {
+          amountSpan.innerText = "Rs." + (it.count * it.ourPrice).toFixed(2);
+        }
+      }
+    });
+
+
+  }
+
+
+  function highlightItemAdded(id) {
+    const row = document.querySelector(`.item[data-id="${id}"]`);
+    if (row) {
+      row.classList.remove("selected");
+      row.classList.add("highlight-added");
+      setTimeout(() => row.classList.remove("highlight-added"), 500); // remove after 0.5s
+      setTimeout(() => row.classList.add("selected"), 500); // remove after 0.5s
+    }
+  }
+
+
+  function highlightItemRemoved(id, count) {
+    const row = document.querySelector(`.item[data-id="${id}"]`);
+    if (row) {
+      row.classList.remove("selected");
+      row.classList.add("highlight-removed");
+      setTimeout(() => row.classList.remove("highlight-removed"), 500); // remove after 0.5s
+      if (count !== 0) {
+        setTimeout(() => row.classList.add("selected"), 500); // remove after 0.5s
+      }
+    }
+  }
+
+  function increase(id) {
+    hidePreview();
+    const item = items.find(i => i.id === id);
+    item.count++;
+    document.getElementById(`count-${id}`).innerText = item.count;
+    updateAmount(id);
+    highlightItemAdded(id); // 👈 highlight
+
+    // Calculate current discount
+    const totalMRP = items.reduce((sum, i) => sum + (i.mrp * i.count), 0);
+    const discountRate = totalMRP > 5000 ? 0.45 : 0.40;
+    showFloatingDiscount(id, discountRate, totalMRP);
+
+  }
+
+  function decrease(id) {
+    hidePreview();
+    const item = items.find(i => i.id === id);
+    if (item.count > 0) item.count--;
+    document.getElementById(`count-${id}`).innerText = item.count;
+    updateAmount(id);
+    highlightItemRemoved(id, item.count); // 👈 highlight
+
+    // Calculate current discount
+    const totalMRP = items.reduce((sum, i) => sum + (i.mrp * i.count), 0);
+    const discountRate = totalMRP > 5000 ? 0.45 : 0.40;
+    showFloatingDiscount(id, discountRate, totalMRP);
+
+  }
+
+
+
+  function showPreview() {
+    const preview = document.getElementById("preview");
+    const billItems = document.getElementById("bill-items");
+    const totalDiv = document.getElementById("total");
+    billItems.innerHTML = "";
+    let total = 0;
+    let totalMRP = 0;
+
+    // Calculate total MRP first
+    items.filter(i => i.count > 0).forEach(item => {
+      totalMRP += item.count * item.mrp;
+    });
+
+    // Decide discount rate
+    let discountRate = totalMRP >= 5000 ? 0.45 : 0.40;
+
+    // Fill preview rows
+    items.filter(i => i.count > 0).forEach(item => {
+      const discountedPrice = (item.mrp * (1 - discountRate)).toFixed(2);
+      const amount = item.count * discountedPrice;
+
+      const row = document.createElement("div");
+      row.className = "bill-row";
+      row.innerHTML = `
+      <span>${item.serial}</span>
+      <span>${item.name}</span>
+      <span>${item.type ? item.type : ""}</span>
+      <span class="crossed-out">Rs.${item.mrp}</span>
+      <span class="bold">Rs.${discountedPrice}</span>
+      <span>${item.count}</span>
+      <span class="bold">Rs.${amount.toFixed(2)}</span>
+    `;
+      billItems.appendChild(row);
+      total += amount;
+    });
+
+    // If nothing selected
+    if (total === 0) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      const firstItem = document.querySelector(".item");
+      if (firstItem) {
+        let blinkCount = 0;
+        const blinkInterval = setInterval(() => {
+          firstItem.classList.toggle("highlight-added");
+          blinkCount++;
+          if (blinkCount === 6) {
+            clearInterval(blinkInterval);
+            firstItem.classList.remove("highlight-added");
+          }
+        }, 400);
+      }
+      return;
+    }
+
+    // Show totals and discount info
+    let discountAmount = totalMRP - total;
+    totalDiv.innerHTML = `
+  <div style="display:flex; justify-content:space-between;">
+    <span class="crossed-out">Total MRP: Rs.${totalMRP.toFixed(2)}</span>
+    <span>Our Price Total: Rs.${total.toFixed(2)}</span>
+  </div>
+    <div style="text-align:left; margin-bottom:8px;">
+    Discount Applied on MRP: ${discountRate * 100}%<br>
+    Discount Amount from MRP: Rs.${discountAmount.toFixed(2)}
+  </div>
+  <span style="font-size:18px; font-weight:bold;">Final Payable Amount: Rs.${total.toFixed(2)}</span>
+  <br>
+  <span>Note: Shipping charges may apply based on your delivery location<\span> 
+`;
+
+
+    preview.style.display = "block";
+
+    document.querySelector("#preview button:last-child")
+      .scrollIntoView({ behavior: "smooth" });
+  }
+
+  function downloadPDF() {
+
+    // Validate form
+    const name = document.getElementById("cust-name").value.trim();
+    const phone = document.getElementById("cust-phone").value.trim();
+    const address = document.getElementById("cust-address").value.trim();
+
+    if (!name || !phone || !address) {
+      alert("⚠️ Please fill all fields (Name, Phone, Address).");
+      return;
+    }
+
+    if (!/^\d{10}$/.test(phone)) {
+      alert("⚠️ Please enter a valid phone number.");
+      return;
+    }
+
+
+    // ✅ Generate PDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    // --- Logo (optional) ---
+    // doc.addImage(logoBase64, "PNG", 0, 5, pageWidth, 40);
+    // y = 55;
+
+    // --- Title ---
+    doc.setFontSize(18);        // bigger
+    doc.setFont("helvetica", "bold");  // bold
+    doc.text("RANJITHAM CRACKERS GALLERY", pageWidth / 2, y, { align: "center" });
+
+    y += 10;
+
+    doc.text("Bill Summary", pageWidth / 2, y, { align: "center" });
+
+    y += 10;
+
+    // --- Date & Time (top-right) ---
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-IN");  // eg: 2/9/2025
+    const timeStr = now.toLocaleTimeString("en-IN", {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true        // 👈 12-hour format with AM/PM
+    });
+
+    doc.setFontSize(10);
+    doc.text(`Date: ${dateStr}`, pageWidth - 60, y);
+    doc.text(`Time: ${timeStr}`, pageWidth - 60, y + 5);
+
+
+    // --- Customer Details ---
+    doc.setFontSize(12);
+    doc.text("Customer Details:", 10, y);
+    y += 8;
+    doc.text("Name: " + name, 10, y);
+    y += 8;
+    doc.text("Phone: " + phone, 10, y);
+    y += 8;
+    doc.text("Address: " + address, 10, y);
+    y += 12; // gap before table
+
+    let total = 0;
+
+    // Column positions (adjusted for A4 210mm)
+    const colSerial = 10;
+    const colItem = 25;
+    const colType = 85;
+    const colMRP = 110;
+    const colOur = 135;
+    const colQty = 160;
+    const colAmount = 180; // ✅ pulled left so it fits
+
+    // Table headers
+    doc.text("S.No", colSerial, y);
+    doc.text("Item", colItem, y);
+    doc.text("Type", colType, y);
+    doc.text("MRP", colMRP, y);
+    doc.text("Our Price", colOur, y);
+    doc.text("Qty", colQty, y);
+    doc.text("Amount", colAmount, y);
+    y += 10;
+
+    items.filter(i => i.count > 0).forEach(item => {
+      // First compute total MRP
+      let totalMRP = 0;
+      items.filter(i => i.count > 0).forEach(item => {
+        totalMRP += item.count * item.mrp;
+      });
+      let discountRate = totalMRP >= 5000 ? 0.45 : 0.40;
+
+      // Then inside loop
+      const discountedPrice = (item.mrp * (1 - discountRate)).toFixed(2);
+      const amount = item.count * discountedPrice;
+
+      // Wrap long item names
+      let itemNameLines = doc.splitTextToSize(item.name, 50);
+      let lineHeight = 6;
+      let rowHeight = itemNameLines.length * lineHeight;
+
+      // ✅ Check if we need a new page
+      if (y + rowHeight > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage();
+        y = 20;
+
+        // Redraw table headers on new page
+        doc.setFont("helvetica", "bold");
+        doc.text("S.No", colSerial, y);
+        doc.text("Item", colItem, y);
+        doc.text("Type", colType, y);
+        doc.text("MRP", colMRP, y);
+        doc.text("Our Price", colOur, y);
+        doc.text("Qty", colQty, y);
+        doc.text("Amount", colAmount, y);
+        y += 10;
+        doc.setFont("helvetica", "normal");
+      }
+
+      // Print first line of item row
+      doc.setFont("helvetica", "normal");
+      doc.text(String(item.serial), colSerial, y);
+      doc.text(itemNameLines[0], colItem, y);
+      doc.text(item.type ? item.type : "", colType, y);
+
+      // MRP with strike
+      const mrpText = "Rs." + item.mrp;
+      doc.text(mrpText, colMRP, y);
+      const textWidth = doc.getTextWidth(mrpText);
+      doc.line(colMRP, y - 2, colMRP + textWidth, y - 2);
+
+      doc.text("Rs." + item.ourPrice, colOur, y);
+      doc.text(String(item.count), colQty, y);
+      doc.text("Rs." + amount.toFixed(2), colAmount, y);
+
+      // Extra lines if item name is long
+      for (let i = 1; i < itemNameLines.length; i++) {
+        y += lineHeight;
+        doc.text(itemNameLines[i], colItem, y);
+      }
+
+      total += amount;
+      y += lineHeight;
+    });
+
+    // --- Totals & Discount ---
+    let totalMRP = 0;
+    items.filter(i => i.count > 0).forEach(item => {
+      totalMRP += item.count * item.mrp;
+    });
+
+    let discountRate = totalMRP >= 5000 ? 0.45 : 0.40;
+    let totalOurPrice = items.reduce((sum, it) => sum + (it.count * (it.mrp * (1 - discountRate))), 0);
+    let discountAmount = totalMRP - totalOurPrice;
+
+    // Ensure spacing before summary
+    y += 15;
+
+    doc.setFont("helvetica", "normal");
+
+
+    // --- Total MRP (crossed out) ---
+    let mrpText = `Total MRP: Rs.${totalMRP.toFixed(2)}`;
+    doc.text(mrpText, 10, y);
+    let textWidth = doc.getTextWidth(mrpText);
+    doc.line(10, y - 2, 10 + textWidth, y - 2); // strike-through
+
+    // --- Our Price Total (right aligned) ---
+    let ourPriceText = `Our Price Total: Rs.${totalOurPrice.toFixed(2)}`;
+    doc.text(ourPriceText, pageWidth - 10, y, { align: "right" });
+
+    y += 12;
+
+    doc.text(`Discount Applied on MRP: ${discountRate * 100}%`, 10, y);
+    y += 8;
+    doc.text(`Discount Amount from MRP: Rs.${discountAmount.toFixed(2)}`, 10, y);
+    y += 12;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(`Final Payable Amount: Rs.${totalOurPrice.toFixed(2)}`, 10, y);
+    y += 12;
+    doc.text(`Note: Shipping charges may apply based on your delivery location`, 10, y);
+
+    y += 20;
+
+    doc.text(`Please share this bill summary to your dealer to get the order delivered`, 10, y);
+
+    y += 20;
+    doc.setFontSize(18);        // bigger
+    doc.setFont("helvetica", "bold");  // bold
+    doc.text("Thank you for purchasing, Happy Diwali :)", pageWidth / 2, y, { align: "center" });
+
+    doc.save("bill.pdf");
+  }
+</script>
+</body>
+
+</html>
