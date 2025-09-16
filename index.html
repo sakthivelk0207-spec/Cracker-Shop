@@ -5,237 +5,234 @@
   <meta charset="UTF-8">
   <title>Cracker Shop</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
+  <style>body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
 
-    h1 {
-      text-align: center;
-    }
+h1 {
+  text-align: center;
+}
 
-    .header,
-    .item {
-      display: grid;
-      grid-template-columns: 50px 1fr 120px 100px 100px 100px 120px;
-      align-items: center;
-      padding: 8px;
-    }
+/* -------------------- CARD STYLE FOR ITEMS -------------------- */
+.item {
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  background: #f9f9f9;
+  padding: 15px;
+  margin: 15px 0;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 
-    .header {
-      font-weight: bold;
-      background: #ddd;
-      border-radius: 6px;
-      margin-bottom: 6px;
-    }
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
 
-    .item {
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background: #f9f9f9;
-      margin: 6px 0;
-    }
+.item-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #222;
+  margin-bottom: 12px;
+}
 
-    .buttons {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+.item-row {
+  margin: 6px 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
 
-    .buttons button {
-      padding: 4px 10px;
-      border: 1px solid #888;
-      background: #eee;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+.label {
+  font-weight: bold;
+  color: #333;
+  min-width: 120px;
+  text-align: right;
+}
 
+.value {
+  text-align: left;
+}
 
-    .crossed-out {
-      text-decoration: line-through;
-      color: #555454;
-      /* optional: greyed out */
-    }
+/* -------------------- QTY BUTTONS -------------------- */
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-    .bold {
-      font-weight: bold;
-      color: #000;
-      /* optional: ensure it's darker */
-    }
+.buttons button {
+  padding: 12px 20px;
+  font-size: 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  color: white;
+}
 
+.buttons button:first-child {
+  background-color: #dc3545; /* Red for minus */
+}
 
-    .buttons button:hover {
-      background: #ddd;
-    }
+.buttons button:last-child {
+  background-color: #28a745; /* Green for plus */
+}
 
-    .count {
-      min-width: 24px;
-      text-align: center;
-      font-weight: bold;
-    }
+.buttons button:hover {
+  opacity: 0.85;
+}
 
-    .preview {
-      margin-top: 20px;
-      display: none;
-    }
+.count {
+  min-width: 50px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  background: #fff;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
 
-    .bill-header,
-    .bill-row {
-      display: grid;
-      grid-template-columns: 50px 1fr 120px 100px 100px 100px 120px;
-      padding: 6px;
-      align-items: center;
-    }
+/* -------------------- TEXT STYLES -------------------- */
+.crossed-out {
+  text-decoration: line-through;
+  color: #555454;
+}
 
-    .bill-header {
-      font-weight: bold;
-      background: #ddd;
-      border-radius: 6px;
-    }
+.bold {
+  font-weight: bold;
+  color: #000;
+}
 
-    .bill-row {
-      border-bottom: 1px solid #ccc;
-    }
+/* -------------------- BILL PREVIEW TABLE -------------------- */
+.bill-header,
+.bill-row {
+  display: grid;
+  grid-template-columns: 60px 2fr 120px 80px 120px; 
+  /* S.No | Item (double space) | Our Price | Qty | Amount */
+  padding: 8px;
+  align-items: center;
+  gap: 12px;
+}
 
-    .total {
-      font-weight: bold;
-      font-size: 18px;
-      margin-top: 10px;
-      text-align: right;
-    }
+.bill-header {
+  font-weight: bold;
+  background: #ddd;
+  border-radius: 6px;
+}
 
-    .highlight-added {
-      background-color: #0bde3c !important;
-      /* light green */
-      transition: background-color 0.5s ease;
-    }
+.bill-row {
+  border-bottom: 1px solid #ccc;
+  word-wrap: break-word;
+}
 
-    .highlight-removed {
-      background-color: #f43737 !important;
-      /* light green */
-      transition: background-color 0.5s ease;
-    }
+/* -------------------- PREVIEW SECTION -------------------- */
+.preview {
+  margin-top: 20px;
+  display: none;
+}
 
-    #discount-info {
-      text-align: center;
-      font-weight: bold;
-      margin: 15px 0;
-      color: #d9534f;
-      font-size: 30px;
-      /* bigger font */
-    }
+.total {
+  font-weight: bold;
+  font-size: 18px;
+  margin-top: 10px;
+  text-align: right;
+}
 
-    .floating-discount {
-      position: absolute;
-      background: #000;
-      color: #fff;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      opacity: 0;
-      transition: opacity 0.3s ease, transform 0.3s ease;
-      z-index: 999;
-      pointer-events: none;
-    }
+/* -------------------- DISCOUNT INFO -------------------- */
+#discount-info {
+  text-align: center;
+  font-weight: bold;
+  margin: 15px 0;
+  color: #d9534f;
+  font-size: 30px;
+}
 
-    .btn {
-      font-size: 18px;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin: 0 10px;
-      font-weight: bold;
-    }
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
 
-    .preview-btn {
-      background-color: #28a745;
-      /* green */
-      color: white;
-    }
+.floating-discount {
+  position: absolute;
+  background: #000;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 999;
+  pointer-events: none;
+}
 
-    .preview-btn:hover {
-      background-color: #218838;
-    }
+/* -------------------- ACTION BUTTONS -------------------- */
+.btn {
+  font-size: 18px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 0 10px;
+  font-weight: bold;
+}
 
-    .clear-btn {
-      background-color: #dc3545;
-      /* red */
-      color: white;
-    }
+.preview-btn {
+  background-color: #28a745;
+  color: white;
+}
 
-    .clear-btn:hover {
-      background-color: #c82333;
-    }
+.preview-btn:hover {
+  background-color: #218838;
+}
 
-    .back-btn {
-      background-color: #007bff;
-      /* blue */
-      color: white;
-    }
+.clear-btn {
+  background-color: #dc3545;
+  color: white;
+}
 
-    .back-btn:hover {
-      background-color: #0069d9;
-    }
+.clear-btn:hover {
+  background-color: #c82333;
+}
 
-    .download-btn {
-      background-color: #28a745;
-      /* green */
-      color: white;
-    }
+.back-btn {
+  background-color: #007bff;
+  color: white;
+}
 
-    .download-btn:hover {
-      background-color: #218838;
-    }
+.back-btn:hover {
+  background-color: #0069d9;
+}
 
-    /* Make grid responsive */
-    @media (max-width: 768px) {
+.download-btn {
+  background-color: #28a745;
+  color: white;
+}
 
-      .header,
-      .item,
-      .bill-header,
-      .bill-row {
-        grid-template-columns: 40px 1fr 70px 80px 80px 80px;
-        font-size: 12px;
-      }
-    }
+.download-btn:hover {
+  background-color: #218838;
+}
 
-    /* On very small screens, allow horizontal scroll */
-    @media (max-width: 480px) {
+/* -------------------- HIGHLIGHT EFFECTS -------------------- */
+.highlight-added {
+  background-color: #0bde3c !important;
+  transition: background-color 0.5s ease;
+}
 
-      .header,
-      .item,
-      .bill-header,
-      .bill-row {
-        display: grid;
-        grid-template-columns: 50px 150px 80px 80px 80px 80px 100px;
-        overflow-x: auto;
-        font-size: 11px;
-      }
+.highlight-removed {
+  background-color: #f43737 !important;
+  transition: background-color 0.5s ease;
+}
 
-      .item,
-      .bill-row {
-        padding: 4px;
-      }
+.selected {
+  background-color: #d9f2ff !important;
+  border-color: #3399ff;
+}
 
-      .buttons button {
-        padding: 6px 12px;
-        /* bigger for thumbs */
-        font-size: 14px;
-      }
-
-      .count {
-        font-size: 14px;
-      }
-    }
-
-    .selected {
-      background-color: #d9f2ff !important;
-      /* light blue */
-      border-color: #3399ff;
-    }
-  </style>
+</style>
 </head>
 
 <div style="text-align:center;  margin-bottom:20px;">
@@ -247,16 +244,6 @@
   Get upto 45% discount by purchasing more than Rs.5000 of MRP.
 </div>
 
-<!-- Item List -->
-<div class="header">
-  <span>S.No</span>
-  <span>Item</span>
-  <span>Type</span>
-  <span>MRP</span>
-  <span>Our Price</span>
-  <span>Qty</span>
-  <span>Amount</span>
-</div>
 <div id="items-container"></div>
 
 <div style="text-align:center; margin-top:20px; display:flex; justify-content:space-between;">
@@ -270,8 +257,6 @@
   <div class="bill-header">
     <span>S.No</span>
     <span>Item</span>
-    <span>Type</span>
-    <span>MRP</span>
     <span>Our Price</span>
     <span>Qty</span>
     <span>Amount</span>
@@ -488,18 +473,21 @@
     div.className = "item";
     div.setAttribute("data-id", item.id);
     div.innerHTML = `
-        <span>${item.serial}</span>
-        <span>${item.name}</span>
-        <span>${item.type ? item.type : ""}</span>
-        <span class="crossed-out">Rs.${item.mrp}</span>
-        <span class="bold">Rs.${item.ourPrice}</span>
-        <div class="buttons">
-          <button onclick="decrease(${item.id})">-</button>
-          <span id="count-${item.id}" class="count">0</span>
-          <button onclick="increase(${item.id})">+</button>
-        </div>
-        <span  class="bold" id="amount-${item.id}">Rs.0</span>
-      `;
+  <div class="item-row"><span class="label">S.No:</span> <span>${item.serial}</span></div>
+  <div class="item-row"><span class="label">Item Name:</span> <span>${item.name}</span></div>
+  <div class="item-row"><span class="label">Type:</span> <span>${item.type ? item.type : ""}</span></div>
+  <div class="item-row"><span class="label">MRP:</span> <span class="crossed-out">Rs.${item.mrp}</span></div>
+  <div class="item-row"><span class="label">Our Price:</span> <span class="bold">Rs.${item.ourPrice}</span></div>
+  <div class="item-row">
+    <span class="label">Qty:</span>
+    <div class="buttons">
+      <button onclick="decrease(${item.id})">-</button>
+      <span id="count-${item.id}" class="count">0</span>
+      <button onclick="increase(${item.id})">+</button>
+    </div>
+  </div>
+  <div class="item-row"><span class="label">Amount:</span> <span class="bold" id="amount-${item.id}">Rs.0</span></div>
+`;
     container.appendChild(div);
   });
 
@@ -654,18 +642,15 @@
     items.filter(i => i.count > 0).forEach(item => {
       const discountedPrice = (item.mrp * (1 - discountRate)).toFixed(2);
       const amount = item.count * discountedPrice;
-
-      const row = document.createElement("div");
-      row.className = "bill-row";
-      row.innerHTML = `
-      <span>${item.serial}</span>
-      <span>${item.name}</span>
-      <span>${item.type ? item.type : ""}</span>
-      <span class="crossed-out">Rs.${item.mrp}</span>
-      <span class="bold">Rs.${discountedPrice}</span>
-      <span>${item.count}</span>
-      <span class="bold">Rs.${amount.toFixed(2)}</span>
-    `;
+const row = document.createElement("div");
+row.className = "bill-row";
+row.innerHTML = `
+  <span>${item.serial}</span>
+  <span>${item.name}</span>
+  <span class="bold">Rs.${discountedPrice}</span>
+  <span>${item.count}</span>
+  <span class="bold">Rs.${amount.toFixed(2)}</span>
+`;
       billItems.appendChild(row);
       total += amount;
     });
